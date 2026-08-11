@@ -35,14 +35,6 @@ jobs:
       - name: Build WeChat mini program data
         run: node scripts/build_miniprogram.mjs
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
-          publish_branch: gh-pages
-          force_orphan: true
-
       - name: Commit data snapshot back
         run: |
           git config user.name "github-actions[bot]"
@@ -50,3 +42,11 @@ jobs:
           git add report.json index.html miniprogram/data/report.json miniprogram/data/report.js
           git commit -m "chore: update UK daily report $(TZ=Europe/London date +%Y-%m-%d)" || echo "no changes to commit"
           git push
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          force_orphan: true
