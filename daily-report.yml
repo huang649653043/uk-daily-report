@@ -1,0 +1,52 @@
+name: UK Daily Report
+
+# 每天自动生成《英国每日热点日报》
+# GitHub Actions 的 cron 使用 UTC，因此调度 09:00 与 10:00 两个时点，
+# 采集脚本内部会校验“伦敦时间是否为 10 点”，保证全年准点 10:00 London 更新（BST/GMT 自动适配）。
+on:
+  schedule:
+    - cron: "0 9,10 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  daily-report:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: uk-daily-report
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Collect data (TikTok UK / Google / Reddit / BBC)
+        run: node scripts/fetch_data.mjs
+
+      - name: Build web page (index.html + archive/)
+        run: node scripts/build_page.mjs
+
+      - name: Build WeChat mini program data
+        run: node scripts/build_miniprogram.mjs
+
+      - name: Commit data snapshot back
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add report.json index.html archive miniprogram/data/report.json miniprogram/data/report.js
+          git commit -m "chore: update UK daily report $(TZ=Europe/London date +%Y-%m-%d)" || echo "no changes to commit"
+          git push
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          force_orphan: true
