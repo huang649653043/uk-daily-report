@@ -19,13 +19,18 @@ if (process.env.GITHUB_ACTIONS && process.env.GITHUB_EVENT_NAME !== "workflow_di
 }
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+const UA_MOBILE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function fetchText(url, accept, tries = 3) {
+async function fetchText(url, { accept, headers, tries = 3 } = {}) {
   for (let i = 0; i < tries; i++) {
     try {
       const res = await fetch(url, {
-        headers: { "User-Agent": UA, Accept: accept || "application/rss+xml, application/json, text/xml, */*" },
+        headers: {
+          "User-Agent": UA, Accept: accept || "application/rss+xml, application/json, text/xml, */*",
+          "Accept-Language": "en-GB,en;q=0.9", "Cache-Control": "no-cache",
+          ...(headers || {}),
+        },
       });
       if (res.ok) return await res.text();
       console.warn("HTTP " + res.status + " " + url);
@@ -72,20 +77,46 @@ function parseTikTokHashtags(html) {
   const re = /class="[^"]*truncate[^"]*text-\[18px\][^"]*"[^>]*>#([A-Za-z0-9_]+)<\/div>([\s\S]{0,1600}?)<span[^>]*class="[^"]*text-\[18px\][^"]*"[^>]*>([\d.,]+[KM]?)<\/span><span[^>]*>Posts<\/span>([\s\S]{0,400}?)<span[^>]*class="[^"]*text-\[18px\][^"]*"[^>]*>([\d.,]+[KM]?)<\/span><span[^>]*>Views<\/span>/gi;
   let m;
   while ((m = re.exec(html))) out.push({ tag: m[1], posts: m[3], views: m[5] });
+  // 宽松兜底：只要页面里出现 #xxx 形态的话题名就收下（最多 3 条，且要求形似话题而非普通文本）
+  if (!out.length) {
+    const seen = new Set();
+    const re2 = />#([A-Za-z][A-Za-z0-9_]{2,24})<\/div>/g;
+    let m2;
+    while ((m2 = re2.exec(html)) && out.length < 3) {
+      if (!seen.has(m2[1])) { seen.add(m2[1]); out.push({ tag: m2[1], posts: "", views: "" }); }
+    }
+  }
   return out;
 }
 
 async function fetchTikTokHashtags() {
+  const candidates = [];
   for (const period of [1, 7, 30]) {
-    const url = "https://ads.tiktok.com/creative/creativeCenter/trends/hashtag?period=" + period + "&region=GB";
-    const html = await fetchText(url, "text/html,application/xhtml+xml,*/*", 2);
+    candidates.push(
+      "https://ads.tiktok.com/creative/creativeCenter/trends/hashtag?period=" + period + "&region=GB&country_code=GB&app_language=en&app_platform=pc"
+    );
+  }
+  for (const url of candidates) {
+    const html = await fetchText(url, {
+      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      headers: {
+        "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Site": "none",
+        "Upgrade-Insecure-Requests": "1",
+      },
+      tries: 2,
+    });
     if (!html) continue;
+    console.log("[TikTok] len=" + html.length
+      + " heki=" + html.includes("hekination")
+      + " truncate=" + html.includes("truncate")
+      + " consent=" + /consent|verify|captcha|robot|sign in/i.test(html.slice(0, 4000)));
+    if (html.length < 2000) { console.warn("[TikTok] HTML 过短，可能被拦截: " + html.slice(0, 300).replace(/\s+/g, " ")); continue; }
     const items = parseTikTokHashtags(html.replace(/\s+/g, " "));
     if (items.length) {
-      console.log("TikTok 英国热门话题抓取成功（period=" + period + "）：" + items.map((i) => "#" + i.tag).join(" / "));
+      console.log("TikTok 英国热门话题抓取成功：" + items.map((i) => "#" + i.tag).join(" / "));
       return items.slice(0, 3);
     }
-    console.warn("TikTok period=" + period + " 未解析到话题");
+    console.warn("TikTok 未解析到话题：" + url.split("?")[0].replace(/^https:\/\/ads\.tiktok\.com/, ""));
   }
   return [];
 }
@@ -119,8 +150,8 @@ function makeTikTokItem(t, rank) {
   return {
     rank, title: "#" + t.tag, platform: "tiktok", badge: "🎬 TikTok",
     source: "TikTok 英国热门话题", sourceUrl: "https://www.tiktok.com/tag/" + encodeURIComponent(t.tag),
-    heat: heatLabel + " · " + t.posts + " 帖 / " + t.views + " 播放", heatLevel: heat,
-    analysis: known.desc || ("TikTok 英国热门话题 #" + t.tag + "，近 24 小时 " + t.posts + " 个新帖、" + t.views + " 次播放，社区创作活跃。"),
+    heat: (t.posts && t.views ? heatLabel + " · " + t.posts + " 帖 / " + t.views + " 播放" : heatLabel), heatLevel: heat,
+    analysis: known.desc || ("TikTok 英国热门话题 #" + t.tag + (t.posts ? "，近 24 小时 " + t.posts + " 个新帖、" + t.views + " 次播放" : "，社区创作活跃") + "。"),
     promotion: known.promo || ("借 #" + t.tag + " 流量做\"清洁解压 Before/After\"短视频（去油污/除垢/宠物毛发），挂 #" + t.tag + " + #CleanTok，评论区引导进店铺转化。"),
   };
 }
@@ -172,6 +203,16 @@ function dedupe(items) {
   return out;
 }
 
+// 交错混合多个数据源，避免单一平台霸榜
+function interleave(arrays) {
+  const out = [];
+  const max = Math.max(...arrays.map((a) => a.length), 0);
+  for (let i = 0; i < max; i++) {
+    for (const arr of arrays) { if (arr[i]) out.push(arr[i]); }
+  }
+  return out;
+}
+
 function platformOf(source) {
   const s = String(source || "");
   if (s.startsWith("TikTok")) return "tiktok";
@@ -218,14 +259,16 @@ const main = async () => {
   const tiktokItems = tiktokRaw.map((t, i) => makeTikTokItem(t, i + 1));
 
   // 2) 其余平台
-  const bbcXml = await fetchText("https://feeds.bbci.co.uk/news/uk/rss.xml");
-  const bbcItems = bbcXml ? xmlItems(bbcXml).map((i) => ({ title: i.title, source: "BBC News", sourceUrl: i.sourceUrl })) : [];
   const gtXml = await fetchText("https://trends.google.com/trending/rss?geo=GB");
   const gtItems = gtXml ? xmlItems(gtXml).map((i) => ({ title: i.title, source: "Google 热搜", sourceUrl: i.sourceUrl })) : [];
 
+  const bbcXml = await fetchText("https://feeds.bbci.co.uk/news/uk/rss.xml");
+  const bbcItems = bbcXml ? xmlItems(bbcXml).map((i) => ({ title: i.title, source: "BBC News", sourceUrl: i.sourceUrl })) : [];
+
   const redditItems = [];
   for (const sub of ["unitedkingdom", "AskUK"]) {
-    const txt = await fetchText("https://www.reddit.com/r/" + sub + "/top.json?t=day&limit=6");
+    let txt = await fetchText("https://www.reddit.com/r/" + sub + "/top.json?t=day&limit=6", { accept: "application/json", tries: 1 });
+    if (!txt) txt = await fetchText("https://old.reddit.com/r/" + sub + "/top.json?t=day&limit=6", { accept: "application/json", headers: { "User-Agent": "uk-daily-report/1.0 by daily-bot" }, tries: 1 });
     if (txt) {
       try {
         const j = JSON.parse(txt);
@@ -244,15 +287,14 @@ const main = async () => {
     : "TikTok 官方榜单当日不可用，已以 Google Search UK 实时热门搜索补位；近7日已报道事件降权；跨平台已去重。";
 
   let top10 = [];
+  const othersPool = cool(prev, dedupe(interleave([gtItems, redditItems, bbcItems])));
   if (tiktokOK) {
     top10 = tiktokItems.slice();
-    const others = cool(prev, dedupe([...bbcItems, ...gtItems, ...redditItems]));
-    others.slice(0, 10 - tiktokItems.length).forEach((raw, i) => {
+    othersPool.slice(0, 10 - tiktokItems.length).forEach((raw, i) => {
       top10.push(makeItem(raw, tiktokItems.length + i + 1, prev));
     });
   } else {
-    const others = cool(prev, dedupe([...bbcItems, ...gtItems, ...redditItems]));
-    others.slice(0, 10).forEach((raw, i) => top10.push(makeItem(raw, i + 1, prev)));
+    othersPool.slice(0, 10).forEach((raw, i) => top10.push(makeItem(raw, i + 1, prev)));
   }
   if (!top10.length && prev && prev.top10) {
     top10 = prev.top10.map((p) => makeItem({ title: p.title, source: p.source, sourceUrl: p.sourceUrl, platform: p.platform }, p.rank || 1, null));
@@ -282,7 +324,7 @@ const main = async () => {
   };
 
   fs.writeFileSync(REPORT_PATH, JSON.stringify(report, null, 2), "utf8");
-  console.log("采集完成：" + meta.captureTimeLondon + "（Top10 已生成，其中 TikTok " + tiktokItems.length + " 条置顶）");
+  console.log("采集完成：" + meta.captureTimeLondon + "（Top10 已生成，其中 TikTok " + tiktokItems.length + " 条置顶，Google " + gtItems.length + " 条 / Reddit " + redditItems.length + " 条 / BBC " + bbcItems.length + " 条）");
 };
 
 main().catch((e) => { console.error(e); process.exit(1); });
