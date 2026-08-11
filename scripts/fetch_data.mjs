@@ -117,6 +117,8 @@ async function fetchTikTokHashtags() {
       return items.slice(0, 3);
     }
     console.warn("TikTok 未解析到话题：" + url.split("?")[0].replace(/^https:\/\/ads\.tiktok\.com/, ""));
+    const hit = html.indexOf("hekination");
+    if (hit >= 0) console.log("[TikTok] ctx=" + html.slice(Math.max(0, hit - 200), hit + 700).replace(/\s+/g, " "));
   }
   return [];
 }
