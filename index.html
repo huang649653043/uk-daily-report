@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>英国每日热点日报 · Top10</title>
-<meta name="description" content="英国每日 Top 10 热点：来源、事件分析与内容推广结合点（A4 一页版）">
+<meta name="description" content="英国每日 Top 10 热点：来源、事件分析与家庭清洁产品内容推广结合点（A4 一页版）">
 <style>
 :root{
   --bg:#eef1f8; --card:#ffffff; --ink:#141a2b; --muted:#66708a;
@@ -29,10 +29,14 @@ body{
 }
 .hero::before{content:"";position:absolute;width:200px;height:200px;border-radius:50%;background:#3b82f6;filter:blur(50px);opacity:.5;top:-80px;right:-40px;animation:drift 8s ease-in-out infinite alternate}
 @keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(18px,-12px) scale(1.1)}}
-.hero-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.hero-top{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.hero-actions{display:flex;align-items:center;gap:6px}
 .live{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:3px 10px;font-size:10.5px;font-weight:700;letter-spacing:1px}
 .live i{width:7px;height:7px;border-radius:50%;background:#ff4d5e;box-shadow:0 0 0 0 rgba(255,77,94,.7);animation:pulse 1.6s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,77,94,.7)}70%{box-shadow:0 0 0 8px rgba(255,77,94,0)}100%{box-shadow:0 0 0 0 rgba(255,77,94,0)}}
+.datepick{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:3px 8px;font-size:10.5px;font-weight:700}
+.datepick select{background:transparent;border:none;color:#fff;font-size:10.5px;font-weight:800;outline:none;cursor:pointer}
+.datepick select option{color:#141a2b}
 .theme-btn{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:4px 10px;font-size:11px;cursor:pointer}
 .hero h1{position:relative;z-index:1;font-size:21px;font-weight:900;letter-spacing:.5px;margin-top:8px;line-height:1.2}
 .hero h1 .grad{background:linear-gradient(90deg,#fff,#ffe6ea);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
@@ -75,6 +79,11 @@ section{margin-top:12px}
 .hotcard.top2 .rk{background:linear-gradient(135deg,#94a3b8,#64748b)}
 .hotcard.top3 .rk{background:linear-gradient(135deg,#d97706,#b45309)}
 .heat{font-size:9.5px;font-weight:800;color:var(--red);background:#fdecef;border-radius:999px;padding:2px 7px;letter-spacing:.3px}
+.badge{flex:none;font-size:9px;font-weight:800;color:#fff;border-radius:5px;padding:2px 6px;letter-spacing:.3px}
+.badge.tiktok{background:linear-gradient(135deg,#fe2c55,#25f4ee)}
+.badge.google{background:linear-gradient(135deg,#4285f4,#34a853)}
+.badge.reddit{background:linear-gradient(135deg,#ff4500,#ff8717)}
+.badge.bbc,.badge.news{background:linear-gradient(135deg,#012169,#3b82f6)}
 .src{margin-left:auto;font-size:9.5px;color:var(--muted);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px}
 .title{font-size:13.5px;font-weight:800;line-height:1.35;margin:2px 0 5px;padding-right:22px}
 .hbar{height:4px;border-radius:99px;background:var(--bar);overflow:hidden;margin-bottom:6px}
@@ -84,6 +93,14 @@ section{margin-top:12px}
 html.dark .blk .lab{color:#8ab4ff}
 .promo{font-size:11.5px;background:linear-gradient(135deg,rgba(245,158,11,.08),rgba(224,56,79,.08));border:1px dashed rgba(224,56,79,.4);border-radius:8px;padding:4px 7px;margin-top:3px}
 .promo .lab{color:var(--red);display:inline}
+/* ---------- toast ---------- */
+.toast{
+  position:fixed;left:50%;top:14px;transform:translate(-50%,-80px);z-index:60;
+  background:rgba(20,26,43,.92);color:#fff;font-size:11.5px;font-weight:700;
+  padding:8px 16px;border-radius:999px;box-shadow:0 8px 20px rgba(0,0,0,.25);
+  transition:transform .35s cubic-bezier(.22,1,.36,1);pointer-events:none;
+}
+.toast.show{transform:translate(-50%,0)}
 /* ---------- footer ---------- */
 footer{margin-top:12px;color:var(--muted);font-size:10px;text-align:center;line-height:1.6}
 /* ---------- floating bar ---------- */
@@ -110,7 +127,7 @@ footer{margin-top:12px;color:var(--muted);font-size:10px;text-align:center;line-
   .hotgrid{grid-template-columns:1fr 1fr;gap:6px}
   .hotcard{box-shadow:none;break-inside:avoid;margin:0}
   .fbar{display:none}
-  .theme-btn{display:none}
+  .theme-btn,.datepick{display:none}
   section{margin-top:8px}
   .sec-head{margin-bottom:5px}
 }
@@ -122,7 +139,10 @@ footer{margin-top:12px;color:var(--muted);font-size:10px;text-align:center;line-
   <header class="hero">
     <div class="hero-top">
       <span class="live"><i></i>LIVE · 每日更新</span>
-      <button class="theme-btn" id="themeBtn">🌙 深色</button>
+      <div class="hero-actions">
+        <label class="datepick">📅 <select id="dateSel"><option>加载中…</option></select></label>
+        <button class="theme-btn" id="themeBtn">🌙 深色</button>
+      </div>
     </div>
     <h1>英国每日热点日报 <span class="grad">· UK TOP 10</span></h1>
     <div class="meta" id="dateLine"></div>
@@ -138,13 +158,15 @@ footer{margin-top:12px;color:var(--muted);font-size:10px;text-align:center;line-
   <section>
     <div class="sec-head">
       <h2>今日 <em>Top 10</em> 热点</h2>
-      <span>来源 · 事件分析 · 内容推广结合点</span>
+      <span>TikTok 领跑 · 来源 · 事件分析 · 清洁产品推广</span>
     </div>
     <div class="hotgrid" id="hotList"></div>
   </section>
 
   <footer id="foot"></footer>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <div class="fbar">
   <span class="hint" id="fbarHint">A4 一页完整呈现 · 打印/截图即得</span>
@@ -153,14 +175,52 @@ footer{margin-top:12px;color:var(--muted);font-size:10px;text-align:center;line-
 </div>
 
 <script>
-var REPORT_DATA = {"meta":{"title":"英国每日热点日报","date":"2026-08-11","weekday":"Tuesday","captureTimeLondon":"2026-08-11 10:00 BST","timezoneNote":"英国夏令时 BST（UTC+1）","window":"近12小时活跃热点信号","focus":"今日核心：民生 / 科技AI；完整 Top10 见下方","note":"X/TikTok 官方榜单无公开 API，已以 Google Search UK 实时热门搜索补位；近7日已报道事件降权；跨平台已去重。","promotionBase":"推广假设：面向英国本地及中文跨境受众的内容账号（公众号 / 小红书 / TikTok / 短视频），产品含信息内容、本地服务与电商选品。"},"top10":[{"rank":1,"title":"Call with No10 gives us hope, PC Harper's mother says","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cy8m1pjg4k3o?at_medium=RSS&amp;at_campaign=rss","heat":"全网置顶","heatLevel":100,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":2,"title":"Amber heat health alerts in place for almost all of England as next heatwave hits","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/weather/articles/ce8ljn1ngg2o?at_medium=RSS&amp;at_campaign=rss","heat":"高热度","heatLevel":96,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":3,"title":"England set to eliminate hepatitis C","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/c75gk620r22o?at_medium=RSS&amp;at_campaign=rss","heat":"高热度","heatLevel":92,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":4,"title":"Councils to get more powers to stop vape and betting shops, PM announces","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cvg90el9236o?at_medium=RSS&amp;at_campaign=rss","heat":"高关注","heatLevel":88,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":5,"title":"GB's Hunt comes of age with European 100m gold","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/sport/athletics/articles/c629lxdx88wo?at_medium=RSS&amp;at_campaign=rss","heat":"高关注","heatLevel":84,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":6,"title":"London Heathrow no longer Europe's busiest airport","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cdx7kwkqqkgo?at_medium=RSS&amp;at_campaign=rss","heat":"平台热议","heatLevel":80,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":7,"title":"Cocaine worth £232m found in banana shipment","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cvgj4p6yjrmo?at_medium=RSS&amp;at_campaign=rss","heat":"平台热议","heatLevel":76,"analysis":"科技与AI议题：行业关注度高、话题性强，兼具专业读者与大众传播价值。","promotion":"做行业盘点与深度解读（如 AI 独角兽地图），面向从业者与出海人群，可链接报告或 SaaS 产品。"},{"rank":8,"title":"Treasury contributed to woman's death, inquest hears","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cgje066zd63o?at_medium=RSS&amp;at_campaign=rss","heat":"平台热议","heatLevel":72,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":9,"title":"Vandals target playground before it has even opened","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/c8xn7qzpe54o?at_medium=RSS&amp;at_campaign=rss","heat":"上升中","heatLevel":68,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"做实用攻略/清单向内容（如避暑、限水、省钱），易被收藏转发，可挂生活好物与本地服务。"},{"rank":10,"title":"Antiques stolen in 16th Century manor house raid","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/c2dk84e7xp8o?at_medium=RSS&amp;at_campaign=rss","heat":"上升中","heatLevel":64,"analysis":"科技与AI议题：行业关注度高、话题性强，兼具专业读者与大众传播价值。","promotion":"做行业盘点与深度解读（如 AI 独角兽地图），面向从业者与出海人群，可链接报告或 SaaS 产品。"}]};
-var PAGE = { data:null, rankColors:['#e0384f','#64748b','#d97706','#2563eb','#7c3aed','#0891b2','#059669','#d97706','#db2777','#4f46e5'] };
+var REPORT_DATA = {"meta":{"title":"英国每日热点日报","date":"2026-08-11","weekday":"Tuesday","captureTimeLondon":"2026-08-11 10:00 BST","timezoneNote":"英国夏令时 BST（UTC+1）","window":"近12小时活跃热点信号","focus":"今日核心：民生 / 科技AI；完整 Top10 见下方","note":"TikTok 官方榜单当日不可用，已以 Google Search UK 实时热门搜索补位；近7日已报道事件降权；跨平台已去重。","promotionBase":"推广假设：家庭清洁类产品（厨房油污清洁、卫浴除垢、地毯/布艺清洁、宠物毛发清理、收纳清洁工具等），面向英国本地与中文跨境用户，主打 TikTok 短视频场景种草 + 公众号/小红书图文转化。"},"top10":[{"rank":1,"title":"Call with No 10 gives us hope, PC Harper's mother says","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cy8m1pjg4k3o?at_medium=RSS&amp;at_campaign=rss","heat":"全网置顶","heatLevel":100,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":2,"title":"Amber Met Office extreme heat warning issued as temperatures could reach 38C","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/weather/articles/ce8ljn1ngg2o?at_medium=RSS&amp;at_campaign=rss","heat":"高热度","heatLevel":96,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":3,"title":"England set to eliminate hepatitis C","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/c75gk620r22o?at_medium=RSS&amp;at_campaign=rss","heat":"高热度","heatLevel":92,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":4,"title":"Councils to get more powers to stop vape and betting shops, PM announces","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cvg90el9236o?at_medium=RSS&amp;at_campaign=rss","heat":"高关注","heatLevel":88,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":5,"title":"GB's Hunt comes of age with European 100m gold","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/sport/athletics/articles/c629lxdx88wo?at_medium=RSS&amp;at_campaign=rss","heat":"高关注","heatLevel":84,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":6,"title":"London Heathrow no longer Europe's busiest airport","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cdx7kwkqqkgo?at_medium=RSS&amp;at_campaign=rss","heat":"平台热议","heatLevel":80,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":7,"title":"Cocaine worth £232m found in banana shipment","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cvgj4p6yjrmo?at_medium=RSS&amp;at_campaign=rss","heat":"平台热议","heatLevel":76,"analysis":"科技与AI议题：行业关注度高、话题性强，兼具专业读者与大众传播价值。","promotion":"科技 AI 热点：做\"AI 时代家务减负\"内容——智能清洁工具 vs 经典清洁剂实测对比，测评种草，专业+实用双人群。"},{"rank":8,"title":"Treasury contributed to woman's death, inquest hears","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/cgje066zd63o?at_medium=RSS&amp;at_campaign=rss","heat":"平台热议","heatLevel":72,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":9,"title":"Vandals target playground before it has even opened","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/c8xn7qzpe54o?at_medium=RSS&amp;at_campaign=rss","heat":"上升中","heatLevel":68,"analysis":"民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。","promotion":"民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。"},{"rank":10,"title":"Antiques stolen in 16th Century manor house raid","platform":"bbc","badge":"📰 BBC","source":"BBC News","sourceUrl":"https://www.bbc.co.uk/news/articles/c2dk84e7xp8o?at_medium=RSS&amp;at_campaign=rss","heat":"上升中","heatLevel":64,"analysis":"科技与AI议题：行业关注度高、话题性强，兼具专业读者与大众传播价值。","promotion":"科技 AI 热点：做\"AI 时代家务减负\"内容——智能清洁工具 vs 经典清洁剂实测对比，测评种草，专业+实用双人群。"}]};
+var PAGE = { data:null, dates:[], rankColors:['#e0384f','#64748b','#d97706','#2563eb','#7c3aed','#0891b2','#059669','#d97706','#db2777','#4f46e5'] };
+function fmtDate(d){ return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 (function(){
-  if(REPORT_DATA && REPORT_DATA.top10){ PAGE.data = REPORT_DATA; render(); return; }
+  if(REPORT_DATA && REPORT_DATA.top10){ PAGE.data = REPORT_DATA; render(); initDates(); return; }
   fetch('report.json?v='+Date.now()).then(function(r){return r.json();}).then(function(j){
     if(j && j.top10){ PAGE.data = j; render(); }
   }).catch(function(){});
+  initDates();
 })();
+function initDates(){
+  fetch('archive/index.json?v='+Date.now()).then(function(r){return r.ok?r.json():Promise.reject();}).then(function(idx){
+    PAGE.dates = (idx && idx.dates) || [];
+    fillDateSel();
+  }).catch(function(){
+    var arr = [], d = new Date();
+    for(var i=0;i<14;i++){ arr.push(fmtDate(d)); d.setDate(d.getDate()-1); }
+    PAGE.dates = arr;
+    fillDateSel();
+  });
+}
+function fillDateSel(){
+  var s = document.getElementById('dateSel');
+  s.innerHTML = '';
+  PAGE.dates.forEach(function(d){
+    var o = document.createElement('option'); o.value = d; o.textContent = d; s.appendChild(o);
+  });
+  var cur = (PAGE.data && PAGE.data.meta && PAGE.data.meta.date) || fmtDate(new Date());
+  if(PAGE.dates.indexOf(cur) >= 0){ s.value = cur; }
+  else if(PAGE.dates.length){ s.value = PAGE.dates[0]; }
+}
+function showToast(t){
+  var el = document.getElementById('toast');
+  el.textContent = t;
+  el.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(function(){ el.classList.remove('show'); }, 2600);
+}
+function loadDate(d){
+  var s = document.getElementById('dateSel'); s.value = d;
+  fetch('archive/' + d + '.json?v='+Date.now()).then(function(r){ return r.ok ? r.json() : Promise.reject(); }).then(function(j){
+    if(j && j.top10){ PAGE.data = j; render(); window.scrollTo({top:0, behavior:'smooth'}); showToast('已加载 ' + d + ' 日报'); }
+  }).catch(function(){
+    showToast('该日期暂无数据，已保留当前视图');
+  });
+}
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function heatColor(v){ return v>=90?'#e0384f':v>=75?'#f59e0b':'#2563eb'; }
 function render(){
@@ -179,17 +239,18 @@ function render(){
   d.top10.forEach(function(it, i){
     var rc = PAGE.rankColors[i % PAGE.rankColors.length];
     var top = i<3 ? ' top'+(i+1) : '';
+    var badge = it.badge ? '<span class="badge ' + esc(it.platform||'news') + '">' + esc(it.badge) + '</span>' : '';
     hot += '<article class="hotcard reveal' + top + '" style="--rankc:' + rc + '">' +
       '<span class="rank">' + String(i+1).padStart(2,'0') + '</span>' +
       '<div class="body">' +
-        '<div class="rankline"><span class="rk">' + (i+1) + '</span>' +
+        '<div class="rankline"><span class="rk">' + (i+1) + '</span>' + badge +
           '<span class="heat">🔥 ' + esc(it.heat) + '</span>' +
           (it.source ? '<a class="src" href="' + esc(it.sourceUrl||'#') + '" target="_blank" rel="noopener">' + esc(it.source) + ' ↗</a>' : '') +
         '</div>' +
         '<div class="title">' + esc(it.title) + '</div>' +
         '<div class="hbar"><i data-w="' + it.heatLevel + '"></i></div>' +
         '<div class="blk"><span class="lab">📌 分析：</span>' + esc(it.analysis) + '</div>' +
-        '<div class="blk promo"><span class="lab">🚀 推广：</span>' + esc(it.promotion) + '</div>' +
+        '<div class="blk promo"><span class="lab">🧽 推广：</span>' + esc(it.promotion) + '</div>' +
       '</div></article>';
   });
   document.getElementById('hotList').innerHTML = hot;
@@ -242,6 +303,8 @@ function fallbackCopy(txt){
 (function(){
   var btn = document.getElementById('copyBtn');
   if(btn){ btn.addEventListener('click', copyText); }
+  var sel = document.getElementById('dateSel');
+  sel.addEventListener('change', function(){ loadDate(sel.value); });
   var th = document.getElementById('themeBtn');
   th.addEventListener('click', function(){
     var dark = !document.documentElement.classList.contains('dark');
