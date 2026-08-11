@@ -111,14 +111,13 @@ async function fetchTikTokHashtags() {
       + " truncate=" + html.includes("truncate")
       + " consent=" + /consent|verify|captcha|robot|sign in/i.test(html.slice(0, 4000)));
     if (html.length < 2000) { console.warn("[TikTok] HTML 过短，可能被拦截: " + html.slice(0, 300).replace(/\s+/g, " ")); continue; }
-    const items = parseTikTokHashtags(html.replace(/\s+/g, " "));
+    const clean = html.replace(/<!--[\s\S]*?-->/g, "").replace(/\s+/g, " ");
+    const items = parseTikTokHashtags(clean);
     if (items.length) {
       console.log("TikTok 英国热门话题抓取成功：" + items.map((i) => "#" + i.tag).join(" / "));
       return items.slice(0, 3);
     }
     console.warn("TikTok 未解析到话题：" + url.split("?")[0].replace(/^https:\/\/ads\.tiktok\.com/, ""));
-    const hit = html.indexOf("hekination");
-    if (hit >= 0) console.log("[TikTok] ctx=" + html.slice(Math.max(0, hit - 200), hit + 700).replace(/\s+/g, " "));
   }
   return [];
 }
@@ -271,6 +270,11 @@ const main = async () => {
   for (const sub of ["unitedkingdom", "AskUK"]) {
     let txt = await fetchText("https://www.reddit.com/r/" + sub + "/top.json?t=day&limit=6", { accept: "application/json", tries: 1 });
     if (!txt) txt = await fetchText("https://old.reddit.com/r/" + sub + "/top.json?t=day&limit=6", { accept: "application/json", headers: { "User-Agent": "uk-daily-report/1.0 by daily-bot" }, tries: 1 });
+    if (!txt) txt = await fetchText("https://www.reddit.com/r/" + sub + "/top/.rss?t=day&limit=6", { accept: "application/rss+xml,text/xml,*/*", headers: { "User-Agent": "uk-daily-report/1.0 by daily-bot" }, tries: 1 });
+    if (txt && txt.trim().startsWith("<?xml")) {
+      xmlItems(txt).forEach((i) => redditItems.push({ title: i.title, source: "Reddit r/" + sub, sourceUrl: i.sourceUrl }));
+      txt = null;
+    }
     if (txt) {
       try {
         const j = JSON.parse(txt);
