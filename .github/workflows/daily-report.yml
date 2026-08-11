@@ -26,10 +26,10 @@ jobs:
         with:
           node-version: 20
 
-      - name: Collect data (BBC / Google Trends / Reddit)
+      - name: Collect data (TikTok UK / Google / Reddit / BBC)
         run: node scripts/fetch_data.mjs
 
-      - name: Build web page (index.html)
+      - name: Build web page (index.html + archive/)
         run: node scripts/build_page.mjs
 
       - name: Build WeChat mini program data
@@ -39,7 +39,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add report.json index.html miniprogram/data/report.json miniprogram/data/report.js
+          git add report.json index.html archive miniprogram/data/report.json miniprogram/data/report.js
           git commit -m "chore: update UK daily report $(TZ=Europe/London date +%Y-%m-%d)" || echo "no changes to commit"
           git push
 
