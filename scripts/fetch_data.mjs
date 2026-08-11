@@ -141,7 +141,7 @@ const TIKTOK_KNOWN = {
 function viewToHeat(views) {
   const s = String(views || "1K").toUpperCase();
   const n = parseFloat(s) * (s.endsWith("M") ? 1e6 : s.endsWith("K") ? 1e3 : 1);
-  return Math.min(99, Math.round(58 + Math.log10(Math.max(n, 2000)) * 12));
+  return Math.min(98, Math.round(50 + Math.log10(Math.max(n, 2000)) * 6));
 }
 
 function makeTikTokItem(t, rank) {
