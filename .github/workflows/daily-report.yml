@@ -1,11 +1,11 @@
 name: UK Daily Report
 
 # 每天自动生成《英国每日热点日报》
-# GitHub Actions 的 cron 使用 UTC，因此调度 09:00 与 10:00 两个时点，
-# 采集脚本内部会校验“伦敦时间是否为 10 点”，保证全年准点 10:00 London 更新（BST/GMT 自动适配）。
+# GitHub Actions 的 cron 使用 UTC，因此调度 06:00 与 07:00 两个时点，
+# 采集脚本内部会校验“伦敦时间是否为 07 点”，保证全年准点 07:00 London 更新（BST/GMT 自动适配）。
 on:
   schedule:
-    - cron: "0 9,10 * * *"
+    - cron: "0 6,7 * * *"
   workflow_dispatch:
 
 permissions:
