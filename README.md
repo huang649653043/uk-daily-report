@@ -1,6 +1,6 @@
 # 英国每日热点日报（UK Daily Report）
 
-每天英国时间 10:00 自动生成并更新的英国热点 Top10 单页日报，可每日查看，也可回溯历史日期。
+每天英国时间 07:00 自动生成并更新的英国热点 Top10 单页日报，可每日查看，也可回溯历史日期。
 
 线上地址：<https://huang649653043.github.io/uk-daily-report/>
 
@@ -12,7 +12,7 @@
 - 每条热点包含：来源链接、事件分析、**家庭清洁类产品内容推广建议**（TikTok/短视频场景种草 + 公众号/小红书图文转化）
 
 ## 每日更新
-- GitHub Actions 定时任务：每天 09:00 / 10:00 UTC（= 伦敦 10:00 BST/GMT 全年准点）运行 `scripts/fetch_data.mjs` → `scripts/build_page.mjs`
+- GitHub Actions 定时任务：每天 06:00 / 07:00 UTC（= 伦敦 07:00 BST/GMT 全年准点）运行 `scripts/fetch_data.mjs` → `scripts/build_page.mjs`
 - 构建时自动归档：`archive/YYYY-MM-DD.json`，并维护 `archive/index.json` 日期索引
 - 网页右上角日期选择器可切换查看历史日期日报（点击「📅」下拉选择）
 
