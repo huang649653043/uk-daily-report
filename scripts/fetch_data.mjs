@@ -2,7 +2,7 @@
 // 数据源优先级：TikTok 英国热门话题（官方 Creative Center 榜单）→ Google Search UK 实时热搜 → Reddit UK → BBC News RSS
 // X (Twitter) 官方实时榜单无公开 API：自动标注“不可用 → Google Search UK 补位”
 // 输出：report.json（Top10：标题 / 来源 / 热度 / 事件分析 / 家庭清洁产品内容推广结合点）
-// 运行：node scripts/fetch_data.mjs（需可联网；GitHub Actions 已配置每日 10:00 伦敦自动运行）
+// 运行：node scripts/fetch_data.mjs（需可联网；GitHub Actions 已配置每日 07:00 伦敦自动运行）
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,11 +15,10 @@ if (process.env.GITHUB_ACTIONS && process.env.GITHUB_EVENT_NAME !== "workflow_di
   const hour = parseInt(
     new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", hour12: false }).format(new Date()), 10
   );
-  if (hour !== 10) { console.log("伦敦时间非 10 点，本次跳过采集"); process.exit(0); }
+  if (hour !== 7) { console.log("伦敦时间非 07 点，本次跳过采集"); process.exit(0); }
 }
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-const UA_MOBILE = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function fetchText(url, { accept, headers, tries = 3 } = {}) {
@@ -66,7 +65,7 @@ function londonNow() {
   return {
     date: get("year") + "-" + get("month") + "-" + get("day"),
     weekday: get("weekday"),
-    captureTimeLondon: get("year") + "-" + get("month") + "-" + get("day") + " 10:00 " + zone,
+    captureTimeLondon: get("year") + "-" + get("month") + "-" + get("day") + " 07:00 " + zone,
     timezoneNote: "英国" + (zone === "BST" ? "夏令时 BST（UTC+1）" : "标准时间 GMT（UTC+0）"),
   };
 }
@@ -77,7 +76,6 @@ function parseTikTokHashtags(html) {
   const re = /class="[^"]*truncate[^"]*text-\[18px\][^"]*"[^>]*>#([A-Za-z0-9_]+)<\/div>([\s\S]{0,1600}?)<span[^>]*class="[^"]*text-\[18px\][^"]*"[^>]*>([\d.,]+[KM]?)<\/span><span[^>]*>Posts<\/span>([\s\S]{0,400}?)<span[^>]*class="[^"]*text-\[18px\][^"]*"[^>]*>([\d.,]+[KM]?)<\/span><span[^>]*>Views<\/span>/gi;
   let m;
   while ((m = re.exec(html))) out.push({ tag: m[1], posts: m[3], views: m[5] });
-  // 宽松兜底：只要页面里出现 #xxx 形态的话题名就收下（最多 3 条，且要求形似话题而非普通文本）
   if (!out.length) {
     const seen = new Set();
     const re2 = />#([A-Za-z][A-Za-z0-9_]{2,24})<\/div>/g;
@@ -106,13 +104,7 @@ async function fetchTikTokHashtags() {
       tries: 2,
     });
     if (!html) continue;
-    console.log("[TikTok] len=" + html.length
-      + " heki=" + html.includes("hekination")
-      + " truncate=" + html.includes("truncate")
-      + " consent=" + /consent|verify|captcha|robot|sign in/i.test(html.slice(0, 4000)));
-    if (html.length < 2000) { console.warn("[TikTok] HTML 过短，可能被拦截: " + html.slice(0, 300).replace(/\s+/g, " ")); continue; }
-    const clean = html.replace(/<!--[\s\S]*?-->/g, "").replace(/\s+/g, " ");
-    const items = parseTikTokHashtags(clean);
+    const items = parseTikTokHashtags(html.replace(/<!--[\s\S]*?-->/g, "").replace(/\s+/g, " "));
     if (items.length) {
       console.log("TikTok 英国热门话题抓取成功：" + items.map((i) => "#" + i.tag).join(" / "));
       return items.slice(0, 3);
@@ -122,7 +114,7 @@ async function fetchTikTokHashtags() {
   return [];
 }
 
-// 已知 TikTok 话题的准确解读；未知话题走通用模板
+// 已知 TikTok 话题的准确解读；未知话题走差异化通用模板
 const TIKTOK_KNOWN = {
   hekination: {
     desc: "利物浦前锋 Hugo Ekitiké 球迷热梗（Heki+Nation）刷屏，社区二创爆发，播放量破千万。",
@@ -148,16 +140,31 @@ function makeTikTokItem(t, rank) {
   const heat = viewToHeat(t.views);
   const heatLabel = rank === 1 ? "TikTok 顶流" : rank === 2 ? "TikTok 热议" : "TikTok 上升";
   const known = TIKTOK_KNOWN[(t.tag || "").toLowerCase()] || {};
+  const promoPool = [
+    (tag) => "借 #" + tag + " 流量拍\"清洁解压 Before/After\"短视频（去油污/除垢/宠物毛发），挂 #" + tag + " + #CleanTok，评论区引导进店铺转化。",
+    (tag) => "用 #" + tag + " 做\"家里最脏角落挑战\"：一镜到底展示清洁剂实测效果，标题带 #" + tag + "，置顶评论挂购物车链接。",
+    (tag) => "蹭 #" + tag + " 热点出\"3 件家务神器开箱\"：厨房油污/卫浴水垢/地毯污渍各 10 秒实测，结尾引导进主页店铺。",
+    (tag) => "围绕 #" + tag + " 拍\"Clean With Me\"沉浸式大扫除：沙发、地毯、浴室分区清洁，评论区答疑引导下单。",
+  ];
+  const genericPromo = promoPool[(hashStr(t.tag) + rank) % promoPool.length](t.tag);
   return {
     rank, title: "#" + t.tag, platform: "tiktok", badge: "🎬 TikTok",
     source: "TikTok 英国热门话题", sourceUrl: "https://www.tiktok.com/tag/" + encodeURIComponent(t.tag),
     heat: (t.posts && t.views ? heatLabel + " · " + t.posts + " 帖 / " + t.views + " 播放" : heatLabel), heatLevel: heat,
     analysis: known.desc || ("TikTok 英国热门话题 #" + t.tag + (t.posts ? "，近 24 小时 " + t.posts + " 个新帖、" + t.views + " 次播放" : "，社区创作活跃") + "。"),
-    promotion: known.promo || ("借 #" + t.tag + " 流量做\"清洁解压 Before/After\"短视频（去油污/除垢/宠物毛发），挂 #" + t.tag + " + #CleanTok，评论区引导进店铺转化。"),
+    promotion: known.promo || genericPromo,
   };
 }
 
-// ---------- 关键词 → 专题（用于自动生成分析与推广建议） ----------
+// ---------- 差异化分析与推广生成（同标题固定、不同标题不同文案） ----------
+function hashStr(s) {
+  let h = 0;
+  const str = String(s || "");
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h;
+}
+function pick(h, arr, salt) { return arr[(h + salt * 7919) % arr.length]; }
+
 const TOPIC_KEYWORDS = {
   politics: ["government", "minister", "cabinet", "election", "parliament", "housing", "policy", "tories", "labour", "immigration", "badenoch", "burnham", "bill", "vote", "law", "prison", "release", "court", "police"],
   economy: ["gdp", "inflation", "cpi", "interest rate", "bank of england", "economy", "retail", "tax", "pound", "ftse", "jobs", "unemployment", "wage"],
@@ -166,22 +173,94 @@ const TOPIC_KEYWORDS = {
   tech: ["ai", "artificial intelligence", "tech", "chip", "robot", "startup", "cyber", "software", "openai", "google", "apple", "fund"],
 };
 const TOPIC_LABEL = { politics: "时事政治", economy: "经济金融", culture: "文化娱乐", livelihood: "民生", tech: "科技AI" };
-const ANALYSIS_TEMPLATE = {
-  politics: "政治与政策议题：涉及政府决策与公众利益，讨论热度高、长尾效应明显。",
-  economy: "经济数据/市场议题：处于数据发布与解读节点，媒体与投资者关注集中。",
-  culture: "文化娱乐与体育热点：情绪价值高、易传播，但时效窗口短，需当日跟进。",
-  livelihood: "民生议题：直接影响日常生活与开销，实用属性强、大众参与度高。",
-  tech: "科技与AI议题：行业关注度高、话题性强，兼具专业读者与大众传播价值。",
-};
-// 推广建议统一围绕家庭清洁类产品展开
-const PROMOTION_TEMPLATE = {
-  politics: "政策热点借势：用\"国民解压/大扫除\"生活内容承接流量（除油除垢 Before-After），避开争议站队，观点号保持事实准确。",
-  economy: "省钱话题绑定：做\"物价高企，3 个自制清洁配方省 10 倍\"测评图文，易收藏转发，直接挂清洁剂链接。",
-  culture: "娱乐体育热点：借看球/派对/音乐节场景拍\"狂欢后 5 分钟清洁\"短剧，展示去污渍、除味、收纳，娱乐化种草。",
-  livelihood: "民生实用场景：高温/潮湿/宠物/过敏季清洁攻略（除霉、除螨、宠物毛发、油污），清单式图文易收藏，直接带清洁产品。",
-  tech: "科技 AI 热点：做\"AI 时代家务减负\"内容——智能清洁工具 vs 经典清洁剂实测对比，测评种草，专业+实用双人群。",
-};
 
+const ANALYSIS_SIGNALS = [
+  { re: /heat|hot|temperature|warm|sun|drought|weather|flood|rain|storm|met office/i, hit: "天气与生活场景强相关，大众实用需求高", hooks: ["高温天", "雨季返潮"], prods: ["除霉除菌喷雾", "地板/木地板清洁液", "玻璃/镜面清洁剂"] },
+  { re: /pet|dog|cat|animal/i, hit: "宠物话题情绪价值高，养宠人群参与度强", hooks: ["宠物掉毛季", "过敏季"], prods: ["宠物毛发清理工具", "地毯/布艺清洁剂", "多功能去污湿巾"] },
+  { re: /football|sport|match|game|olympic|european|championship|tennis|golf|athletics/i, hit: "体育话题流量爆发力强，讨论以社群二创为主", hooks: ["看球/聚会派对后", "节前大扫除"], prods: ["地毯/布艺清洁剂", "厨房油污清洁剂", "多功能去污湿巾"] },
+  { re: /food|kitchen|cook|recipe|restaurant|bread|coffee|drink|supermarket/i, hit: "美食/零售话题种草属性强，复刻与探店内容转化短", hooks: ["看球/聚会派对后", "节前大扫除"], prods: ["厨房油污清洁剂", "卫浴除垢剂", "多功能去污湿巾"] },
+  { re: /economy|inflation|gdp|tax|price|cost|pound|retail|wage|job|bank of england|interest/i, hit: "经济议题与家庭开支直接挂钩，省钱诉求突出", hooks: ["月底省钱", "开学季"], prods: ["省钱 DIY 配方图文", "多功能去污湿巾", "收纳清洁工具组"] },
+  { re: /ai|artificial|tech|chip|robot|software|cyber|startup|app/i, hit: "科技话题兼具专业与大众传播价值，解读空间大", hooks: ["搬家/入住清洁", "节前大扫除"], prods: ["收纳清洁工具组", "玻璃/镜面清洁剂", "洗衣机槽/衣物除味剂"] },
+  { re: /nhs|health|hospital|virus|disease|care|medical|vaccine/i, hit: "健康议题实用性强，家庭场景关联度高", hooks: ["过敏季", "雨季返潮"], prods: ["除霉除菌喷雾", "洗衣机槽/衣物除味剂", "多功能去污湿巾"] },
+  { re: /housing|rent|house|flat|property|tenant|homeless/i, hit: "住房议题贴近家庭生活，入住/退租清洁需求被带动", hooks: ["搬家/入住清洁", "出租退房"], prods: ["收纳清洁工具组", "地板/木地板清洁液", "除霉除菌喷雾"] },
+  { re: /police|prison|crime|law|court|justice|offender|protest/i, hit: "司法治安议题公众情绪强，话题长尾效应明显", hooks: ["节前大扫除", "月底省钱"], prods: ["多功能去污湿巾", "收纳清洁工具组", "厨房油污清洁剂"] },
+  { re: /travel|holiday|airport|flight|train|heathrow|tourist/i, hit: "出行话题时效性强，暑期/节前场景关联清洁收纳", hooks: ["搬家/入住清洁", "节前大扫除"], prods: ["收纳清洁工具组", "洗衣机槽/衣物除味剂", "多功能去污湿巾"] },
+];
+const ANALYSIS_OPENER = {
+  politics: "政治与政策议题：",
+  economy: "经济数据/市场议题：",
+  culture: "文化娱乐与体育热点：",
+  livelihood: "民生议题：",
+  tech: "科技与AI议题：",
+};
+const ANALYSIS_TAIL = [
+  "，讨论热度高、长尾效应明显。",
+  "，媒体与公众关注集中，适合当日跟进。",
+  "，情绪价值高、易传播，时效窗口较短。",
+  "，实用属性强、大众参与度高。",
+  "，话题性强，兼具专业读者与大众传播价值。",
+];
+const ANALYSIS_GENERIC_HIT = ["事件与公众日常生活关联度较高", "话题在社交媒体上讨论活跃", "公众关注度与讨论量同步上升", "议题覆盖面广、讨论人群多元"];
+
+const PROMO_FORMATS = [
+  "15 秒 Before/After 对比短视频",
+  "\"Clean With Me\"沉浸式清洁视频",
+  "清洁 ASMR 解压短剧",
+  "5 步清单式图文/短视频",
+  "新旧产品实测对比",
+  "省钱 DIY 配方图文",
+  "POV 视角生活短剧",
+  "\"家里最脏的角落\"挑战视频",
+];
+const PROMO_PRODUCTS = [
+  "厨房油污清洁剂",
+  "卫浴除垢剂",
+  "地毯/布艺清洁剂",
+  "宠物毛发清理工具",
+  "除霉除菌喷雾",
+  "多功能去污湿巾",
+  "玻璃/镜面清洁剂",
+  "收纳清洁工具组",
+  "洗衣机槽/衣物除味剂",
+  "地板/木地板清洁液",
+];
+const PROMO_HOOKS = [
+  "高温天", "雨季返潮", "宠物掉毛季", "看球/聚会派对后", "搬家/入住清洁", "开学季", "过敏季", "月底省钱", "出租退房", "节前大扫除",
+];
+const PROMO_SKEL = [
+  (f, p, h) => "借势做「" + f + "」：用" + p + "演示" + h + "场景的清洁效果，标题挂 #CleanTok 相关话题，评论区引导进店铺。",
+  (f, p, h) => "切入" + h + "场景拍「" + f + "」，主打" + p + "实测（油污/水垢/毛发一喷即净），链接挂购物车，转化路径短。",
+  (f, p, h) => "选题：「" + h + "怎么清洁最快」，用「" + f + "」展示" + p + "的 Before/After，收藏转发率高，可挂同类清洁套装。",
+  (f, p, h) => "做一期「" + f + "」，围绕" + p + "在" + h + "的使用痛点展开，结尾放对比图+优惠码，评论区置顶店铺链接。",
+];
+
+function findSignal(title) {
+  const lower = String(title || "").toLowerCase();
+  return ANALYSIS_SIGNALS.find((s) => s.re.test(lower)) || null;
+}
+
+function makeAnalysis(title, topic) {
+  const h = hashStr(title);
+  const signal = findSignal(title);
+  const opener = ANALYSIS_OPENER[topic] || ANALYSIS_OPENER.livelihood;
+  const core = signal ? signal.hit : pick(h, ANALYSIS_GENERIC_HIT, 1);
+  const tail = pick(h, ANALYSIS_TAIL, 3);
+  return opener + core + tail;
+}
+
+function makePromotion(title) {
+  const h = hashStr(title);
+  const signal = findSignal(title);
+  const fmt = pick(h, PROMO_FORMATS, 2);
+  const prodPool = signal && signal.prods ? signal.prods : PROMO_PRODUCTS;
+  const hookPool = signal && signal.hooks ? signal.hooks : PROMO_HOOKS;
+  const prod = pick(h, prodPool, 3);
+  const hook = pick(h, hookPool, 5);
+  const skel = pick(h, PROMO_SKEL, 7);
+  return skel(fmt, prod, hook);
+}
+
+// ---------- 排序与组装 ----------
 function classify(title) {
   const t = (title || "").toLowerCase();
   let best = "livelihood", bestN = 0;
@@ -204,7 +283,6 @@ function dedupe(items) {
   return out;
 }
 
-// 交错混合多个数据源，避免单一平台霸榜
 function interleave(arrays) {
   const out = [];
   const max = Math.max(...arrays.map((a) => a.length), 0);
@@ -224,7 +302,6 @@ function platformOf(source) {
 }
 const BADGE = { tiktok: "🎬 TikTok", google: "🔎 Google 热搜", reddit: "👽 Reddit UK", bbc: "📰 BBC", news: "📰 媒体" };
 
-// 近7日已报道事件降权冷却：与上一日 Top10 同题者排到末尾
 function cool(prev, items) {
   const prevKeys = new Set((prev?.top10 || []).map((p) => norm(p.title)));
   const hot = [], cold = [];
@@ -241,8 +318,8 @@ function makeItem(raw, rank, prev) {
     const hit = prev.top10.find((p) => norm(p.title) === norm(raw.title) || (norm(p.title).length > 18 && norm(raw.title).includes(norm(p.title).slice(0, 18))));
     if (hit && hit.analysis && hit.promotion) { analysis = hit.analysis; promotion = hit.promotion; }
   }
-  if (!analysis) analysis = ANALYSIS_TEMPLATE[topic];
-  if (!promotion) promotion = PROMOTION_TEMPLATE[topic];
+  if (!analysis) analysis = makeAnalysis(raw.title, topic);
+  if (!promotion) promotion = makePromotion(raw.title);
   const platform = raw.platform || platformOf(raw.source);
   return {
     rank, title: raw.title, platform, badge: BADGE[platform] || "📰 媒体",
@@ -307,7 +384,6 @@ const main = async () => {
     sourceNote = "当日抓取失败，沿用上次快照数据。";
   }
 
-  // 自动生成“今日核心”焦点行
   let focus;
   if (tiktokOK) {
     focus = "TikTok 领跑：" + tiktokItems.map((t) => t.title).join(" ") + "；其余见 Google / Reddit / BBC 综合榜";
