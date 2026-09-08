@@ -60,8 +60,9 @@ function xmlItems(xml) {
   return out;
 }
 
-// Google Trends RSS：item 的 <link> 常指向 RSS 源本身（打开是一串 XML 代码），
-// 这里统一改写成该热词的 Google 搜索页，确保点击能看到真实资讯。
+// Google Trends RSS：item 的 <link> 指向 RSS 源本身（打开是一串 XML 代码）。
+// 每条趋势通常自带 ht:news_item_url —— 即该热搜对应的真实新闻原文链接，
+// 优先把这条原文作为点击目标，用户点开即直达那篇新闻，无需再到 Google 手动搜索。
 function parseGoogleTrends(xml) {
   const clean = xml.replace(/<!\[CDATA\[/g, "").replace(/\]\]>/g, "");
   const out = [];
@@ -69,14 +70,30 @@ function parseGoogleTrends(xml) {
   let m;
   while ((m = re.exec(clean))) {
     const b = m[1];
+    const field = (re1, re2) => {
+      const mm = re1.exec(b) || (re2 && re2.exec(b));
+      return mm ? mm[1] : "";
+    };
     const t = (b.match(/<title>([\s\S]*?)<\/title>/) || [])[1];
     if (!t) continue;
-    const link = decodeXml((b.match(/<link>([\s\S]*?)<\/link>/) || [])[1] || "");
-    const isFeed = /trends\.google\.com\/trending\/rss/i.test(link);
-    const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(decodeXml(t));
-    out.push({ title: decodeXml(t), sourceUrl: isFeed ? searchUrl : (link || searchUrl) });
+    // Google 的 news 字段以 ht: 命名空间输出，部分环境前缀写法不同，两套都解析
+    const newsUrl = decodeXml(field(/<ht:news_item_url[^>]*>([\s\S]*?)<\/ht:news_item_url>/, /<news_item_url[^>]*>([\s\S]*?)<\/news_item_url>/));
+    const newsSource = decodeXml(field(/<ht:news_item_source[^>]*>([\s\S]*?)<\/ht:news_item_source>/, /<news_item_source[^>]*>([\s\S]*?)<\/news_item_source>/));
+    const title = decodeXml(t);
+    out.push({
+      title,
+      newsUrl,
+      newsSource,
+      // 有新闻原文 → 直接原文链接；否则给该热词的 Google News 聚合页兜底
+      sourceUrl: newsUrl || googleNewsSearch(title),
+    });
   }
   return out;
+}
+
+// Google News 关键词聚合页（网页版，非 RSS），用于没有拿到新闻原文链接时的兜底直达。
+function googleNewsSearch(q) {
+  return "https://news.google.com/search?q=" + encodeURIComponent(String(q || "")) + "&hl=en-GB&gl=GB&ceid=GB:en";
 }
 function londonNow() {
   const f = new Intl.DateTimeFormat("en-GB", {
@@ -349,6 +366,7 @@ function makeItem(raw, rank, prev) {
   return {
     rank, title: raw.title, platform, badge: BADGE[platform] || "📰 媒体",
     source: raw.source || "公开平台", sourceUrl: raw.sourceUrl || "",
+    newsUrl: raw.newsUrl || "", newsSource: raw.newsSource || "",
     heat, heatLevel, analysis, promotion,
   };
 }
@@ -363,7 +381,10 @@ const main = async () => {
 
   // 2) 其余平台
   const gtXml = await fetchText("https://trends.google.com/trending/rss?geo=GB");
-  const gtItems = gtXml ? parseGoogleTrends(gtXml).map((i) => ({ title: i.title, source: "Google 热搜", sourceUrl: i.sourceUrl })) : [];
+  const gtItems = gtXml ? parseGoogleTrends(gtXml).map((i) => ({
+    title: i.title, source: "Google 热搜",
+    sourceUrl: i.sourceUrl, newsUrl: i.newsUrl || "", newsSource: i.newsSource || "",
+  })) : [];
 
   const bbcXml = await fetchText("https://feeds.bbci.co.uk/news/uk/rss.xml");
   const bbcItems = bbcXml ? xmlItems(bbcXml).map((i) => ({ title: i.title, source: "BBC News", sourceUrl: i.sourceUrl })) : [];
