@@ -61,7 +61,7 @@ function xmlItems(xml) {
 }
 
 // Google Trends RSS：item 的 <link> 常指向 RSS 源本身（打开是一串 XML 代码），
-// 因此 Google 热搜一律使用该热词的 Google 搜索页作为跳转目标，确保点开就是真实网页。
+// 这里统一改写成该热词的 Google 搜索页，确保点击能看到真实资讯。
 function parseGoogleTrends(xml) {
   const clean = xml.replace(/<!\[CDATA\[/g, "").replace(/\]\]>/g, "");
   const out = [];
@@ -71,11 +71,89 @@ function parseGoogleTrends(xml) {
     const b = m[1];
     const t = (b.match(/<title>([\s\S]*?)<\/title>/) || [])[1];
     if (!t) continue;
-    const title = decodeXml(t);
-    out.push({ title, sourceUrl: "https://www.google.com/search?q=" + encodeURIComponent(title) });
+    const link = decodeXml((b.match(/<link>([\s\S]*?)<\/link>/) || [])[1] || "");
+    const isFeed = /trends\.google\.com\/trending\/rss/i.test(link);
+    const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(decodeXml(t));
+    out.push({ title: decodeXml(t), sourceUrl: isFeed ? searchUrl : (link || searchUrl) });
   }
   return out;
 }
+function londonNow() {
+  const f = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit",
+    weekday: "long", hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  const parts = f.formatToParts(new Date());
+  const get = (t) => (parts.find((p) => p.type === t) || {}).value || "";
+  const tz = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", timeZoneName: "short" }).format(new Date());
+  const zone = tz.includes("BST") ? "BST" : "GMT";
+  return {
+    date: get("year") + "-" + get("month") + "-" + get("day"),
+    weekday: get("weekday"),
+    captureTimeLondon: get("year") + "-" + get("month") + "-" + get("day") + " 06:00 " + zone,
+    timezoneNote: "英国" + (zone === "BST" ? "夏令时 BST（UTC+1）" : "标准时间 GMT（UTC+0）"),
+  };
+}
+
+// ---------- TikTok 英国热门话题（官方 Creative Center，SSR HTML 匿名可读 Top3） ----------
+function parseTikTokHashtags(html) {
+  const out = [];
+  const re = /class="[^"]*truncate[^"]*text-\[18px\][^"]*"[^>]*>#([A-Za-z0-9_]+)<\/div>([\s\S]{0,1600}?)<span[^>]*class="[^"]*text-\[18px\][^"]*"[^>]*>([\d.,]+[KM]?)<\/span><span[^>]*>Posts<\/span>([\s\S]{0,400}?)<span[^>]*class="[^"]*text-\[18px\][^"]*"[^>]*>([\d.,]+[KM]?)<\/span><span[^>]*>Views<\/span>/gi;
+  let m;
+  while ((m = re.exec(html))) out.push({ tag: m[1], posts: m[3], views: m[5] });
+  if (!out.length) {
+    const seen = new Set();
+    const re2 = />#([A-Za-z][A-Za-z0-9_]{2,24})<\/div>/g;
+    let m2;
+    while ((m2 = re2.exec(html)) && out.length < 3) {
+      if (!seen.has(m2[1])) { seen.add(m2[1]); out.push({ tag: m2[1], posts: "", views: "" }); }
+    }
+  }
+  return out;
+}
+
+async function fetchTikTokHashtags() {
+  const candidates = [];
+  for (const period of [1, 7, 30]) {
+    candidates.push(
+      "https://ads.tiktok.com/creative/creativeCenter/trends/hashtag?period=" + period + "&region=GB&country_code=GB&app_language=en&app_platform=pc"
+    );
+  }
+  for (const url of candidates) {
+    const html = await fetchText(url, {
+      accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+      headers: {
+        "Sec-Fetch-Dest": "document", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Site": "none",
+        "Upgrade-Insecure-Requests": "1",
+      },
+      tries: 2,
+    });
+    if (!html) continue;
+    const items = parseTikTokHashtags(html.replace(/<!--[\s\S]*?-->/g, "").replace(/\s+/g, " "));
+    if (items.length) {
+      console.log("TikTok 英国热门话题抓取成功：" + items.map((i) => "#" + i.tag).join(" / "));
+      return items.slice(0, 3);
+    }
+    console.warn("TikTok 未解析到话题：" + url.split("?")[0].replace(/^https:\/\/ads\.tiktok\.com/, ""));
+  }
+  return [];
+}
+
+// 已知 TikTok 话题的准确解读；未知话题走差异化通用模板
+const TIKTOK_KNOWN = {
+  hekination: {
+    desc: "利物浦前锋 Hugo Ekitiké 球迷热梗（Heki+Nation）刷屏，社区二创爆发，播放量破千万。",
+    promo: "借球迷流量拍\"比赛日客厅 5 分钟焕新\"：沙发/地毯宠物毛发+零食渍清理、派对后油污清洁，挂 #hekination + #CleanTok，评论区引导进店铺。",
+  },
+  ekitike: {
+    desc: "法国前锋 Hugo Ekitiké 相关话题（Sports & Outdoor）持续高热，新帖 5.4K、播放 6.5M。",
+    promo: "体育流量选题：\"看球聚会后厨房 5 分钟急救\"（油污/酒渍/除味）短平快实测视频，挂 #ekitike，直接导流清洁产品。",
+  },
+  brunonation: {
+    desc: "曼联队长 Bruno Fernandes 球迷社区话题，足球流量稳定，新帖 4.4K、播放 3.2M。",
+    promo: "球迷向种草：\"比赛日地毯/沙发清洁挑战\" Before-After 对比视频，挂 #brunonation 蹭热度，评论区引导购买。",
+  },
+};
 
 function viewToHeat(views) {
   const s = String(views || "1K").toUpperCase();
