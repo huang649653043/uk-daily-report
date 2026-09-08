@@ -222,6 +222,13 @@ function loadDate(d){
   });
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+// 链接修正：旧数据中 Google 热搜偶发指向 RSS 源本身（打开是 XML 代码），自动改为该热词的 Google 搜索页
+function itemHref(it){
+  var u = (it && it.sourceUrl) || '';
+  if(!u) return '#';
+  if(/^https?:\/\/trends\.google\.com\/trending\/rss/i.test(u)){ return 'https://www.google.com/search?q=' + encodeURIComponent(it.title || ''); }
+  return u;
+}
 function heatColor(v){ return v>=90?'#e0384f':v>=75?'#f59e0b':'#2563eb'; }
 function render(){
   var d = PAGE.data, m = d.meta;
@@ -245,7 +252,7 @@ function render(){
       '<div class="body">' +
         '<div class="rankline"><span class="rk">' + (i+1) + '</span>' + badge +
           '<span class="heat">🔥 ' + esc(it.heat) + '</span>' +
-          (it.source ? '<a class="src" href="' + esc(it.sourceUrl||'#') + '" target="_blank" rel="noopener">' + esc(it.source) + ' ↗</a>' : '') +
+          (it.source ? '<a class="src" href="' + esc(itemHref(it)) + '" target="_blank" rel="noopener">' + esc(it.source) + ' ↗</a>' : '') +
         '</div>' +
         '<div class="title">' + esc(it.title) + '</div>' +
         '<div class="hbar"><i data-w="' + it.heatLevel + '"></i></div>' +
@@ -255,7 +262,7 @@ function render(){
   });
   document.getElementById('hotList').innerHTML = hot;
   document.getElementById('foot').innerHTML =
-    '<b>' + esc(m.title) + '</b> · ' + esc(m.date) + ' ｜ 每日 10:00（伦敦时间）自动更新 ｜ ' + esc(m.note) + '<br>' + esc(m.promotionBase);
+    '<b>' + esc(m.title) + '</b> · ' + esc(m.date) + ' ｜ 每日 06:00（伦敦时间）自动更新 ｜ ' + esc(m.note) + '<br>' + esc(m.promotionBase);
   observeReveals();
   animateBars();
 }
@@ -286,7 +293,7 @@ function copyText(){
     lines.push('   内容推广结合点：' + it.promotion);
     lines.push('');
   });
-  lines.push('—— ' + m.title + ' · 每日 10:00（伦敦时间）自动更新 ——');
+  lines.push('—— ' + m.title + ' · 每日 06:00（伦敦时间）自动更新 ——');
   var txt = lines.join('\n');
   function done(){ var b = document.getElementById('copyBtn'); b.textContent = '✅ 已复制'; setTimeout(function(){ b.textContent = '📋 复制全文'; }, 1800); }
   if(navigator.clipboard && navigator.clipboard.writeText){
