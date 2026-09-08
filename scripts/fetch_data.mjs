@@ -2,7 +2,7 @@
 // 数据源优先级：TikTok 英国热门话题（官方 Creative Center 榜单）→ Google Search UK 实时热搜 → Reddit UK → BBC News RSS
 // X (Twitter) 官方实时榜单无公开 API：自动标注“不可用 → Google Search UK 补位”
 // 输出：report.json（Top10：标题 / 来源 / 热度 / 事件分析 / 家庭清洁产品内容推广结合点）
-// 运行：node scripts/fetch_data.mjs（需可联网；GitHub Actions 已配置每日 07:00 伦敦自动运行）
+// 运行：node scripts/fetch_data.mjs（需可联网；GitHub Actions 已配置每日 06:00 伦敦自动运行）
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,7 +15,7 @@ if (process.env.GITHUB_ACTIONS && process.env.GITHUB_EVENT_NAME !== "workflow_di
   const hour = parseInt(
     new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", hour12: false }).format(new Date()), 10
   );
-  if (hour !== 7) { console.log("伦敦时间非 07 点，本次跳过采集"); process.exit(0); }
+  if (hour !== 6) { console.log("伦敦时间非 06 点，本次跳过采集"); process.exit(0); }
 }
 
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -39,6 +39,13 @@ async function fetchText(url, { accept, headers, tries = 3 } = {}) {
   return null;
 }
 
+function decodeXml(s) {
+  return String(s || "")
+    .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&").trim();
+}
+
 function xmlItems(xml) {
   const clean = xml.replace(/<!\[CDATA\[/g, "").replace(/\]\]>/g, "");
   const out = [];
@@ -48,11 +55,29 @@ function xmlItems(xml) {
     const b = m[1];
     const t = (b.match(/<title>([\s\S]*?)<\/title>/) || [])[1];
     const l = (b.match(/<link>([\s\S]*?)<\/link>/) || [])[1];
-    if (t) out.push({ title: t.trim(), sourceUrl: (l || "").trim() });
+    if (t) out.push({ title: decodeXml(t), sourceUrl: decodeXml(l || "") });
   }
   return out;
 }
 
+// Google Trends RSS：item 的 <link> 常指向 RSS 源本身（打开是一串 XML 代码），
+// 这里统一改写成该热词的 Google 搜索页，确保点击能看到真实资讯。
+function parseGoogleTrends(xml) {
+  const clean = xml.replace(/<!\[CDATA\[/g, "").replace(/\]\]>/g, "");
+  const out = [];
+  const re = /<item>([\s\S]*?)<\/item>/g;
+  let m;
+  while ((m = re.exec(clean))) {
+    const b = m[1];
+    const t = (b.match(/<title>([\s\S]*?)<\/title>/) || [])[1];
+    if (!t) continue;
+    const link = decodeXml((b.match(/<link>([\s\S]*?)<\/link>/) || [])[1] || "");
+    const isFeed = /trends\.google\.com\/trending\/rss/i.test(link);
+    const searchUrl = "https://www.google.com/search?q=" + encodeURIComponent(decodeXml(t));
+    out.push({ title: decodeXml(t), sourceUrl: isFeed ? searchUrl : (link || searchUrl) });
+  }
+  return out;
+}
 function londonNow() {
   const f = new Intl.DateTimeFormat("en-GB", {
     timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit",
@@ -65,7 +90,7 @@ function londonNow() {
   return {
     date: get("year") + "-" + get("month") + "-" + get("day"),
     weekday: get("weekday"),
-    captureTimeLondon: get("year") + "-" + get("month") + "-" + get("day") + " 07:00 " + zone,
+    captureTimeLondon: get("year") + "-" + get("month") + "-" + get("day") + " 06:00 " + zone,
     timezoneNote: "英国" + (zone === "BST" ? "夏令时 BST（UTC+1）" : "标准时间 GMT（UTC+0）"),
   };
 }
@@ -338,7 +363,7 @@ const main = async () => {
 
   // 2) 其余平台
   const gtXml = await fetchText("https://trends.google.com/trending/rss?geo=GB");
-  const gtItems = gtXml ? xmlItems(gtXml).map((i) => ({ title: i.title, source: "Google 热搜", sourceUrl: i.sourceUrl })) : [];
+  const gtItems = gtXml ? parseGoogleTrends(gtXml).map((i) => ({ title: i.title, source: "Google 热搜", sourceUrl: i.sourceUrl })) : [];
 
   const bbcXml = await fetchText("https://feeds.bbci.co.uk/news/uk/rss.xml");
   const bbcItems = bbcXml ? xmlItems(bbcXml).map((i) => ({ title: i.title, source: "BBC News", sourceUrl: i.sourceUrl })) : [];
