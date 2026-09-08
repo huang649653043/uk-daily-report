@@ -224,14 +224,20 @@ function loadDate(d){
   });
 }
 function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-// 链接修正：旧数据中 Google 热搜偶发指向 RSS 源本身（打开是 XML 代码），自动改为该热词的 Google 搜索页
+// 链接修正：优先使用每条热搜自带的新闻原文链接（newsUrl），点击直达那篇新闻、不再落到搜索页；
+// 旧档数据若只存了 RSS 源地址或旧版 Google 搜索页，则用该关键词的 Google News 聚合页兜底。
+function googleNewsSearchUrl(q){
+  return 'https://news.google.com/search?q=' + q + '&hl=en-GB&gl=GB&ceid=GB:en';
+}
 function itemHref(it){
-  var u = (it && it.sourceUrl) || '';
+  var u = (it && (it.newsUrl || it.sourceUrl)) || '';
   var q = encodeURIComponent((it && it.title) || '');
   if(!u) return '#';
-  // Google Trends RSS / Google News RSS 封装链接打开是 XML 代码 → 一律跳到该关键词的 Google 搜索网页
-  if(/trends\.google\.com\/trending\/rss/i.test(u)) return 'https://www.google.com/search?q=' + q;
-  if(/news\.google\.com\/rss\/articles/i.test(u)) return 'https://www.google.com/search?q=' + q;
+  // 打开是一串 XML/代码的链接（Trends RSS 源、Google News RSS 封装页）或旧版普通 Google 搜索页
+  // → 改为 Google News 关键词聚合页：点开就是该热点的新闻报道流，不用自己再搜一次。
+  if(/trends\.google\.com\/trending\/rss/i.test(u)) return googleNewsSearchUrl(q);
+  if(/news\.google\.com\/rss\/articles/i.test(u)) return googleNewsSearchUrl(q);
+  if(/^https:\/\/www\.google\.com\/search\?/i.test(u)) return googleNewsSearchUrl(q);
   return u;
 }
 function heatColor(v){ return v>=90?'#e0384f':v>=75?'#f59e0b':'#2563eb'; }
