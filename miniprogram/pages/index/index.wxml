@@ -1,0 +1,46 @@
+<view class="wrap">
+  <view class="hero" wx:if="{{meta}}">
+    <view class="hero-top">
+      <text class="live"><text class="dot"></text>LIVE · 今日更新</text>
+    </view>
+    <view class="h1">英国每日热点日报</view>
+    <view class="h1-sub">UK TOP 10</view>
+    <view class="sub">{{meta.date}}（{{meta.weekday}}）</view>
+    <view class="sub">数据抓取时间：{{meta.captureTimeLondon}}（{{meta.timezoneNote}}）</view>
+    <view class="stamp">抓取窗口：{{meta.window}}</view>
+    <view class="focus" wx:if="{{meta.focus}}">{{meta.focus}}</view>
+  </view>
+
+  <view class="note" wx:if="{{meta && meta.note}}">{{meta.note}}</view>
+
+  <view class="section">
+    <view class="h2"><text class="grad">今日 Top 10</text> 热点<text class="en">SOURCE · ANALYSIS · PROMO</text></view>
+
+    <view class="hotcard {{item.rank <= 3 ? 'top' + item.rank : ''}}" wx:for="{{top10}}" wx:key="rank">
+      <view class="rank">{{item.rank < 10 ? '0' + item.rank : item.rank}}</view>
+      <view class="rankline">
+        <view class="rk {{item.rank <= 3 ? 'hot' : ''}}">{{item.rank}}</view>
+        <text class="heat">🔥 {{item.heat}}</text>
+        <text class="src" wx:if="{{item.source}}">来源：{{item.source}}</text>
+      </view>
+      <view class="title">{{item.title}}</view>
+      <view class="hbar"><view class="hbar-fill" style="width: {{item.heatLevel}}%;"></view></view>
+      <view class="blk">
+        <view class="lab">📌 事件分析</view>
+        <view class="txt">{{item.analysis}}</view>
+      </view>
+      <view class="blk promo">
+        <view class="lab">🚀 内容推广结合点</view>
+        <view class="txt">{{item.promotion}}</view>
+      </view>
+    </view>
+  </view>
+
+  <button class="share-btn" open-type="share">📤 分享给朋友</button>
+  <view class="foot" wx:if="{{meta}}">
+    <view>{{meta.title}} · {{meta.date}}</view>
+    <view>数据抓取时间：{{meta.captureTimeLondon}}（{{meta.timezoneNote}}）</view>
+    <view>每日 10:00（伦敦时间）自动更新 · 数据来源于公开平台与媒体，仅供信息参考</view>
+    <view wx:if="{{meta.promotionBase}}">{{meta.promotionBase}}</view>
+  </view>
+</view>
