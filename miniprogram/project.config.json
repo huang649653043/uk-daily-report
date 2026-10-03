@@ -1,0 +1,15 @@
+{
+  "description": "英国每日热点日报 - 微信小程序",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "postcss": true,
+    "minified": true,
+    "enhance": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.4.0",
+  "appid": "touristappid",
+  "projectname": "uk-daily-report",
+  "miniprogramRoot": "./"
+}
