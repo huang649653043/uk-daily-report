@@ -1,0 +1,76 @@
+page {
+  background: #eef1f8; color: #141a2b; font-size: 28rpx; line-height: 1.6;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+.wrap { padding: 0 28rpx 80rpx; }
+.hero {
+  position: relative; overflow: hidden; margin: 0 -28rpx;
+  background: linear-gradient(135deg, #012169 0%, #1e40af 55%, #c8102e 175%);
+  color: #fff; border-radius: 0 0 40rpx 40rpx; padding: 40rpx 32rpx 36rpx;
+  box-shadow: 0 18rpx 40rpx rgba(1,33,105,.25);
+}
+.hero-top { margin-bottom: 14rpx; }
+.live {
+  display: inline-flex; align-items: center; gap: 10rpx;
+  background: rgba(255,255,255,.16); border: 1rpx solid rgba(255,255,255,.35);
+  border-radius: 999rpx; padding: 8rpx 22rpx; font-size: 22rpx; font-weight: 700; letter-spacing: 2rpx;
+}
+.dot { width: 14rpx; height: 14rpx; border-radius: 50%; background: #ff4d5e; }
+.h1 { font-size: 46rpx; font-weight: 900; letter-spacing: 1rpx; }
+.h1-sub { font-size: 30rpx; font-weight: 800; color: #ffe6ea; margin-top: 4rpx; }
+.sub { font-size: 24rpx; opacity: .92; margin-top: 8rpx; }
+.stamp { display: inline-block; margin-top: 16rpx; font-size: 20rpx; background: rgba(255,255,255,.14); border-radius: 10rpx; padding: 6rpx 16rpx; }
+.focus {
+  margin-top: 20rpx; font-size: 22rpx; background: rgba(255,255,255,.12);
+  border: 1rpx solid rgba(255,255,255,.2); border-radius: 14rpx; padding: 12rpx 16rpx; color: #ffeef0;
+}
+.note {
+  background: #fff7e6; color: #8a5b00; border: 1rpx solid #f2dfae;
+  border-radius: 18rpx; padding: 16rpx 20rpx; font-size: 20rpx; margin: 20rpx 0 0; line-height: 1.6;
+}
+.section { margin-top: 30rpx; }
+.h2 { font-size: 32rpx; font-weight: 900; margin-bottom: 20rpx; padding-left: 18rpx; border-left: 8rpx solid #c8102e; }
+.grad { color: #e0384f; }
+.en { font-size: 18rpx; font-weight: 600; color: #66708a; margin-left: 12rpx; }
+.hotcard {
+  position: relative; background: #fff; border: 1rpx solid #e3e8f3; border-radius: 28rpx;
+  padding: 26rpx 26rpx 18rpx; margin-bottom: 22rpx; overflow: hidden;
+  box-shadow: 0 8rpx 22rpx rgba(20,30,60,.06);
+}
+.hotcard::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 8rpx; background: #2563eb; }
+.hotcard.top1::before, .hotcard.top2::before, .hotcard.top3::before { background: linear-gradient(180deg,#f59e0b,#e0384f); }
+.rank {
+  position: absolute; right: 20rpx; top: 12rpx; font-size: 96rpx; font-weight: 900;
+  color: #f1f4fb; line-height: 1; z-index: 0;
+}
+.hotcard.top1 .rank, .hotcard.top2 .rank, .hotcard.top3 .rank { color: transparent; -webkit-text-stroke: 2rpx #f59e0b; opacity: .55; }
+.rankline { position: relative; display: flex; align-items: center; gap: 12rpx; margin-bottom: 12rpx; z-index: 1; }
+.rk {
+  width: 48rpx; height: 48rpx; border-radius: 12rpx; background: #2563eb; color: #fff;
+  font-size: 24rpx; font-weight: 900; display: flex; align-items: center; justify-content: center;
+}
+.rk.hot { background: linear-gradient(135deg,#f59e0b,#f43f5e); }
+.heat {
+  font-size: 20rpx; font-weight: 800; color: #e0384f; background: #fdecef;
+  border-radius: 999rpx; padding: 5rpx 16rpx;
+}
+.src { margin-left: auto; font-size: 20rpx; color: #66708a; }
+.title { position: relative; z-index: 1; font-size: 32rpx; font-weight: 800; line-height: 1.45; margin-bottom: 16rpx; padding-right: 30rpx; }
+.hbar { height: 10rpx; border-radius: 99rpx; background: #f1f4fb; overflow: hidden; margin-bottom: 20rpx; }
+.hbar-fill { display: block; height: 100%; border-radius: 99rpx; background: linear-gradient(90deg,#2563eb,#f59e0b); }
+.blk { margin-bottom: 14rpx; }
+.lab { display: flex; align-items: center; font-size: 22rpx; font-weight: 800; color: #012169; margin-bottom: 6rpx; }
+.txt { font-size: 26rpx; opacity: .92; }
+.promo {
+  background: linear-gradient(135deg, rgba(245,158,11,.08), rgba(224,56,79,.08));
+  border: 1rpx dashed rgba(224,56,79,.45); border-radius: 20rpx; padding: 16rpx 18rpx;
+}
+.promo .lab { color: #e0384f; }
+.foot { margin-top: 40rpx; color: #66708a; font-size: 20rpx; text-align: center; line-height: 1.9; }
+
+.share-btn {
+  margin: 36rpx auto 0; width: 70%; text-align: center; font-size: 28rpx; font-weight: 800;
+  color: #fff; background: linear-gradient(135deg, #c8102e, #e0384f); border-radius: 999rpx;
+  box-shadow: 0 10rpx 24rpx rgba(200,16,46,.3); line-height: 2.4;
+}
+.share-btn::after { border: none; }
